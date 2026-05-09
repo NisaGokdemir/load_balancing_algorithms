@@ -159,3 +159,34 @@ Restoranımıza veda ederken son bir örnek verelim: Bu sefer karşılama görev
 
 > [!CAUTION]
 > **Mühendislik Notu:** Modern sistemlerde sunucu eklendiğinde veya çıkarıldığında tüm eşleşmelerin bozulmaması için **Consistent Hashing** (Tutarlı Karma) adı verilen daha gelişmiş bir versiyonu kullanılır. Eğer sistemin çok sık ölçekleniyorsa (auto-scaling), standart IP Hash yerine Consistent Hashing'e göz atmalısın.
+
+---
+
+### 🎡 Consistent Hashing (Tutarlı Karma)
+
+IP Hashing çok kullanışlıdır ancak büyük bir zayıflığı vardır: Sunucu sayınız değiştiğinde (ölçeklenme), neredeyse tüm eşleşmeler bozulur ve kullanıcılar farklı sunuculara düşer. **Consistent Hashing**, bu sorunu dairesel bir yapı ve "Sanal Düğümler" kullanarak çözer.
+
+#### Nasıl Çalışır? (How it Works)
+1.  **Halka Yapısı:** Tüm olası hash değerleri dairesel bir halka (ring) üzerinde dizilir.
+2.  **Sunucu Yerleşimi:** Sunucular bu halka üzerine rastgele noktalara yerleştirilir. Sadece kendilerini değil, yükü daha dengeli dağıtmak için "Sanal Düğümlerini" (Virtual Nodes) de halkaya koyarlar.
+3.  **Eşleştirme:** Gelen bir istek halka üzerinde bir noktaya düşer. İstek, halka üzerinde **saat yönünde** ilerleyerek karşısına çıkan ilk sunucuya atanır.
+4.  **Esneklik:** Bir sunucu eklendiğinde veya çıkarıldığında, sadece o sunucunun yakınındaki çok küçük bir kullanıcı grubu yer değiştirir. Geriye kalan %90'lık kitle aynı sunucuda kalmaya devam eder.
+
+#### Ne Zaman Tercih Edilir? (When to Use)
+*   **Dinamik Ölçeklenme:** Sunucu sayısının sıkça artıp azaldığı (Auto-scaling) sistemlerde.
+*   **Dağıtık Önbellek (Caching):** Memcached veya Redis cluster yapılarında, sunucu gidince tüm cache'in "miss" (boşa düşme) olmasını engellemek için.
+*   **Büyük Veri (NoSQL):** Verinin binlerce sunucuya dağıtıldığı sistemlerde (Cassandra gibi).
+
+#### Gerçek Hayat Örneği
+Restoranımızda artık dev bir döner masa (halka) olduğunu düşün. Garsonlar bu masanın farklı noktalarında bekliyor. Müşteriler masaya oturduğunda saat yönünde en yakınındaki garsona bakıyor. Eğer bir garson molaya çıkarsa, sadece onun önündeki birkaç müşteri yanındaki garsona kayar. Tüm restoranın düzeni bozulmaz.
+
+#### Artıları ve Eksileri (Benefits & Drawbacks)
+*   ✅ **Minimum Sarsıntı:** Sunucu değişimlerinde sadece etkilenen küçük bir grup yer değiştirir.
+*   ✅ **Mükemmel Ölçeklenebilirlik:** Binlerce sunucu ve milyonlarca kullanıcıyı en az kayıpla yönetir.
+*   ❌ **Karmaşıklık:** Standart hash fonksiyonlarına göre implementasyonu ve yönetimi daha zordur.
+*   ❌ **Dengesiz Dağıtım Riski:** Sanal düğüm sayısı az olursa, bazı sunucular halkada daha geniş yer kaplayıp daha çok yük alabilir.
+
+---
+
+> [!TIP]
+> **Mühendislik Notu:** Sanal düğüm (Virtual Nodes) sayısı ne kadar artarsa, yük dağılımı o kadar pürüzsüz olur. Genellikle sunucu başına 100-200 arası sanal düğüm kullanmak dengeli bir dağıtım sağlar.
